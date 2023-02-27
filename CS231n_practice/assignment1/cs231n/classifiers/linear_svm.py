@@ -37,6 +37,8 @@ def svm_loss_naive(W, X, y, reg):
             margin = scores[j] - correct_class_score + 1  # note delta = 1
             if margin > 0:
                 loss += margin
+                dW[:,j] += X[i]
+                dW[:,y[i]] -= X[i] 
 
     # Right now the loss is a sum over all training examples, but we want it
     # to be an average instead so we divide by num_train.
@@ -55,7 +57,7 @@ def svm_loss_naive(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    dW /= num_train
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -68,6 +70,7 @@ def svm_loss_vectorized(W, X, y, reg):
 
     Inputs and outputs are the same as svm_loss_naive.
     """
+    num_train = X.shape[0]
     loss = 0.0
     dW = np.zeros(W.shape)  # initialize the gradient as zero
 
@@ -78,8 +81,19 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    N_scores = X @ W # N x C
+    N_correct = np.array(N_scores[np.arange(0,N_scores.shape[0]),y]) # => C
+    N_delta = np.ones(N_correct.shape)
+    
+    N_margin = N_scores.T - N_correct + N_delta
+    N_margin[N_margin < 0] = 0
+    N_margin[y,np.arange(0,N_margin.shape[1])] = 0
+    
+    loss += np.sum(N_margin)
+    loss /= num_train
+    
+    loss += reg * np.sum(W * W)
+    
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     #############################################################################
@@ -93,8 +107,16 @@ def svm_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    d = N_scores.T - N_correct + N_delta
+    d[d < 0] = 0
+    d[d > 0] = 1
+    
+    d[y,np.arange(0,N_margin.shape[1])] = 0
+    d[y,np.arange(0,N_margin.shape[1])] = -1 * np.sum(d,axis=0)
+    
+    dW = d @ X
+    dW /= num_train
+    dW = dW.T
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     return loss, dW
