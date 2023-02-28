@@ -34,8 +34,23 @@ def softmax_loss_naive(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    N = X.shape[0]
+    C = W.shape[1]
+    for n in range(N):
+        scores = X[n] @ W # dim C
+        scores -= np.max(scores)
+        loss += -scores[y[n]] + np.log(np.sum(np.exp(scores)))
+        
+        softmax_outs = np.exp(scores) / np.sum(np.exp(scores))
+        for j in range(C):
+            dW[:,j] += softmax_outs[j] * X[n]
+        dW[:,y[n]] -= X[n]
+        
+    loss /= N
+    loss += 0.5 * reg * np.sum(W * W)
+    
+    dW /= N
+    dW += reg * W
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     return loss, dW
@@ -59,8 +74,37 @@ def softmax_loss_vectorized(W, X, y, reg):
     #############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
-
+    num_train = X.shape[0]
+    num_classes = W.shape[1]
+    
+    N_scores = X @ W # N x C matrix
+    N_scores -= np.max(N_scores, axis=1, keepdims=True)
+    N_numerators = np.exp(N_scores) # N x C
+    N_denoms = np.sum(np.exp(N_scores), axis=1) # 1 x N 
+    loss += np.sum(-np.log(N_numerators[np.arange(0,num_train),y] / N_denoms))
+    
+    N_softmax_out = N_numerators / N_denoms.reshape((-1,1)) # N x C
+    temp = N_softmax_out
+    temp[np.arange(num_train),y] -= 1 
+    dW = X.T @ temp
+    
+#     for n in range(N):
+#         scores = X[n] @ W # dim C
+#         scores -= np.max(scores)
+#         loss += -scores[y[n]] + np.log(np.sum(np.exp(scores)))
+        
+#         softmax_outs = np.exp(scores) / np.sum(np.exp(scores))
+#         for j in range(C):
+#             dW[:,j] += softmax_outs[j] * X[n]
+#         # D x C
+#         dW[:,y[n]] -= X[n]
+        
+    loss /= num_train
+    loss += 0.5 * reg * np.sum(W * W)
+    
+    dW /= num_train
+    dW += reg * W
+    
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
     return loss, dW
