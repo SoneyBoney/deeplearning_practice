@@ -87,17 +87,6 @@ def softmax_loss_vectorized(W, X, y, reg):
     temp = N_softmax_out
     temp[np.arange(num_train),y] -= 1 
     dW = X.T @ temp
-    
-#     for n in range(N):
-#         scores = X[n] @ W # dim C
-#         scores -= np.max(scores)
-#         loss += -scores[y[n]] + np.log(np.sum(np.exp(scores)))
-        
-#         softmax_outs = np.exp(scores) / np.sum(np.exp(scores))
-#         for j in range(C):
-#             dW[:,j] += softmax_outs[j] * X[n]
-#         # D x C
-#         dW[:,y[n]] -= X[n]
         
     loss /= num_train
     loss += 0.5 * reg * np.sum(W * W)
