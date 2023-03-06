@@ -74,7 +74,9 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        for i,(in_layer,out_layer) in enumerate(zip([input_dim]+hidden_dims,hidden_dims+[num_classes])):
+            self.params[f'W{i+1}'] = np.random.normal(0, weight_scale, (in_layer, out_layer))
+            self.params[f'b{i+1}'] = np.zeros(out_layer)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -148,8 +150,14 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
-
+        temp = X
+        caches = []
+        for i in range(self.num_layers):
+            forward_func = affine_relu_forward if i != self.num_layers-1 else affine_forward
+            temp, cache = forward_func(temp, self.params[f'W{i+1}'], self.params[f'b{i+1}'])
+            caches.append(cache)
+        
+        scores = temp
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -175,7 +183,18 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        loss,dout = softmax_loss(scores, y)
+        
+        loss += sum([0.5 * self.reg * np.sum(v**2) for k,v in self.params.items() if k.startswith('W')])
+        
+        temp_dout = dout
+        for i in range(self.num_layers-1,-1,-1):
+            backward_func = affine_relu_backward if i != self.num_layers-1 else affine_backward
+            temp_dout, grads[f'W{i+1}'], grads[f'b{i+1}'] = backward_func(temp_dout, caches[i])
+            grads[f'W{i+1}'] += self.reg * self.params[f'W{i+1}']
+        
+#         grads['W1'] += self.reg * self.params['W1']
+#         grads['W2'] += self.reg * self.params['W2']
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################

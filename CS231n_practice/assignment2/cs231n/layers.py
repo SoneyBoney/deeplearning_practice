@@ -25,7 +25,7 @@ def affine_forward(x, w, b):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = x.reshape((x.shape[0],-1)) @ w + b
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -57,7 +57,10 @@ def affine_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N = dout.shape[0]
+    dw = x.reshape((N,-1)).T @ dout
+    dx = (dout @ w.T).reshape((N,*x.shape[1:]))
+    db = np.ones(N) @ dout
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -82,7 +85,7 @@ def relu_forward(x):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    out = np.maximum(0, x)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -108,7 +111,8 @@ def relu_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    dx = dout.copy()
+    dx[x<=0] = 0
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -131,13 +135,26 @@ def softmax_loss(x, y):
     - dx: Gradient of the loss with respect to x
     """
     loss, dx = None, None
-
+    loss = 0.0
+    num_train = x.shape[0]
+    
     ###########################################################################
     # TODO: Copy over your solution from Assignment 1.                        #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    N_scores = x.copy() # N x C matrix
+    N_scores -= np.max(N_scores, axis=1, keepdims=True)
+    N_numerators = np.exp(N_scores) # N x C
+    N_denoms = np.sum(np.exp(N_scores), axis=1) # 1 x N 
+    loss += np.sum(-np.log(N_numerators[np.arange(0,num_train),y] / N_denoms))
+    
+    N_softmax_out = N_numerators / N_denoms.reshape((-1,1)) # N x C
+    dx = N_softmax_out
+    dx[np.arange(num_train),y] -= 1 
+        
+    loss /= num_train
+    dx /= num_train
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################

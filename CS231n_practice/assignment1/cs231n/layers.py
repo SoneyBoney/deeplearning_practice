@@ -2,10 +2,8 @@ from builtins import range
 import numpy as np
 
 
-
 def affine_forward(x, w, b):
-    """
-    Computes the forward pass for an affine (fully-connected) layer.
+    """Computes the forward pass for an affine (fully-connected) layer.
 
     The input x has shape (N, d_1, ..., d_k) and contains a minibatch of N
     examples, where each example x[i] has shape (d_1, ..., d_k). We will
