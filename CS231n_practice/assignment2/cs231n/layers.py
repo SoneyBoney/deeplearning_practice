@@ -395,8 +395,13 @@ def layernorm_forward(x, gamma, beta, ln_param):
     # the batch norm code and leave it almost unchanged?                      #
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    x = x.T
+    layer_mean = x.mean(axis=0)
+    layer_var = x.var(axis=0)
 
-    pass
+    x_hat = (x - layer_mean) / np.sqrt(layer_var + eps)
+    out = gamma * x_hat.T + beta
+    cache = (layer_mean, layer_var, x, gamma, beta, x_hat, eps)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -430,13 +435,23 @@ def layernorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    layer_mean, layer_var, x, gamma, beta, x_hat, eps = cache
+    
+    N = dout.shape[1]
+    
+    d_x_hat = dout * gamma # N x D
+    d_layer_var = np.sum(d_x_hat.T*(x-layer_mean)*(-0.5*(layer_var+eps)**(-3/2)),axis=0)
+    d_layer_mean = np.sum(d_x_hat,axis=1)*(-1/np.sqrt(layer_var+eps))+(d_layer_var*(np.sum(-2*(x-layer_mean),axis=0)/N))
+    
+    dx = d_x_hat.T*(1/np.sqrt(layer_var+eps)) +  d_layer_var*((2*(x-layer_mean))/N) + d_layer_mean/N
+    dgamma = np.sum(dout.T * x_hat, axis=1)
+    dbeta = np.sum(dout,axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
-    return dx, dgamma, dbeta
+    return dx.T, dgamma, dbeta
 
 
 def dropout_forward(x, dropout_param):
