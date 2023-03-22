@@ -155,6 +155,7 @@ class FullyConnectedNet(object):
 
         temp = X
         caches = []
+        dropout_caches = []
         for i in range(self.num_layers):
             if i != self.num_layers-1:
                 if self.normalization == "batchnorm":
@@ -162,11 +163,15 @@ class FullyConnectedNet(object):
                                           self.params[f'G{i+1}'], self.params[f'B{i+1}'], self.bn_params[i])
                 else:
                     temp, cache = affine_relu_forward(temp, self.params[f'W{i+1}'], self.params[f'b{i+1}'])
+                if self.use_dropout:
+                    temp, dropcache = dropout_forward(temp, self.dropout_param)
+                    dropout_caches.append(dropcache)
             else:
                 temp, cache = affine_forward(temp, self.params[f'W{i+1}'], self.params[f'b{i+1}'])
             caches.append(cache)
         
         scores = temp
+        
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -199,6 +204,8 @@ class FullyConnectedNet(object):
         temp_dout = dout
         for i in range(self.num_layers-1,-1,-1):
             if i != self.num_layers-1:
+                if self.use_dropout:
+                    temp_dout = dropout_backward(temp_dout, dropout_caches[i])
                 if self.normalization == "batchnorm":
                     temp_dout, grads[f'W{i+1}'], grads[f'b{i+1}'], grads[f'G{i+1}'], grads[f'B{i+1}'] = affine_batch_relu_backward(temp_dout, caches[i])
                 else:
