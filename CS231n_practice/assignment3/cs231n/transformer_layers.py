@@ -38,8 +38,10 @@ class PositionalEncoding(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
-
+        for i in range(max_len):
+            for j in range(embed_dim):
+                pe[:,i,j] = math.sin(i * 10000**(-j/embed_dim)) if j%2 == 0 else math.cos(i * 10000**(-(j-1)/embed_dim))
+                
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -70,8 +72,8 @@ class PositionalEncoding(nn.Module):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
-
+        temp = x + self.pe[:,0:S,:]
+        output = self.dropout(temp)
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -164,9 +166,20 @@ class MultiHeadAttention(nn.Module):
         #     function masked_fill may come in handy.                              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        q = self.query(query).view((N, S, self.n_head, self.head_dim)).transpose(1,2)
+        k = self.key(key).view((N, T, self.n_head, self.head_dim)).transpose(1,2)
+        temp = torch.matmul(q,k.transpose(2,3)) / math.sqrt(self.emd_dim / self.n_head)
 
-        pass
-
+        if attn_mask is not None:
+            temp = temp.masked_fill(attn_mask==0, -9e15)
+            
+        temp2 = F.softmax(temp, dim=-1)
+        temp3 = self.attn_drop(temp2)
+        v = self.value(value).view((N, T, self.n_head, self.head_dim)).transpose(1,2)
+        temp4 = torch.matmul(temp3,v).transpose(1,2).reshape((N, S, E))
+        
+        output = self.proj(temp4)
+        
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
