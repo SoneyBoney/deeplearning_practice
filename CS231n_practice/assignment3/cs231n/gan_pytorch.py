@@ -30,7 +30,7 @@ def sample_noise(batch_size, dim, seed=None):
 
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    return (-2) * torch.rand((batch_size, dim)) + 1
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -51,7 +51,14 @@ def discriminator(seed=None):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    model = nn.Sequential(
+        Flatten(),
+        nn.Linear(784, 256),
+        nn.LeakyReLU(0.01),
+        nn.Linear(256, 256),
+        nn.LeakyReLU(0.01),
+        nn.Linear(256, 1),
+    )
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -76,7 +83,20 @@ def generator(noise_dim=NOISE_DIM, seed=None):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+#     Fully connected layer from noise_dim to 1024
+#     ReLU
+#     Fully connected layer with size 1024
+#     ReLU
+#     Fully connected layer with size 784
+#     TanH (to clip the image to be in the range of [-1,1])
+    model = nn.Sequential(
+        nn.Linear(noise_dim, 1024),
+        nn.ReLU(),
+        nn.Linear(1024, 1024),
+        nn.ReLU(),
+        nn.Linear(1024, 784),
+        nn.Tanh()
+    )
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -111,9 +131,17 @@ def discriminator_loss(logits_real, logits_fake):
     """
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
-
+    fake = logits_fake.type(dtype).squeeze()
+    real = logits_real.type(dtype).squeeze()
+    
+    ones_real = torch.ones_like(real).type(dtype).squeeze()
+    real_loss = bce_loss(real, ones_real) # -log(D(x))
+    
+    zeros_fake = torch.zeros_like(fake).type(dtype).squeeze()
+    fake_loss = bce_loss(fake, zeros_fake)
+    
+    loss = real_loss + fake_loss
+    
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
 
@@ -130,7 +158,9 @@ def generator_loss(logits_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # -log(D(G(z))
+    ones_fake = torch.ones_like(logits_fake).type(dtype).squeeze()
+    loss = bce_loss(logits_fake, ones_fake)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -149,7 +179,8 @@ def get_optimizer(model):
     optimizer = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    # 1e-3 learning rate, beta1=0.5, beta2=0.999
+    optimizer = optim.Adam(params=model.parameters(), lr=1e-3, betas=(0.5, 0.999))
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return optimizer
@@ -168,7 +199,9 @@ def ls_discriminator_loss(scores_real, scores_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    #12𝔼𝑥∼𝑝data[(𝐷(𝑥)−1)2]+12𝔼𝑧∼𝑝(𝑧)[(𝐷(𝐺(𝑧)))2]
+    
+    loss = 0.5 * ((scores_real - 1)**2).mean() + 0.5 * (scores_fake**2).mean()
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -186,7 +219,7 @@ def ls_generator_loss(scores_fake):
     loss = None
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    loss = 0.5 * ((scores_fake - 1)**2).mean()
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     return loss
@@ -203,8 +236,28 @@ def build_dc_classifier(batch_size):
     # HINT: nn.Sequential might be helpful.                                      #
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-    pass
+# Conv2D: 32 Filters, 5x5, Stride 1
+# Leaky ReLU(alpha=0.01)
+#Max Pool 2x2, Stride 2
+# Conv2D: 64 Filters, 5x5, Stride 1
+# Leaky ReLU(alpha=0.01)
+# Max Pool 2x2, Stride 2
+#Flatten
+# Fully Connected with output size 4 x 4 x 64
+# Leaky ReLU(alpha=0.01)
+# Fully Connected with output size 1
+    return nn.Sequential(
+        nn.Conv2d(1,32,kernel_size=(5,5),stride=1),
+        nn.LeakyReLU(0.01),
+        nn.MaxPool2d(kernel_size=(2,2),stride=2),
+        nn.Conv2d(32,64,kernel_size=(5,5),stride=1),
+        nn.LeakyReLU(0.01),
+        nn.MaxPool2d(kernel_size=(2,2),stride=2),
+        Flatten(),
+        nn.Linear(1024,4 * 4 * 64),
+        nn.LeakyReLU(0.01),
+        nn.Linear(4 * 4 * 64,1),
+    )
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
@@ -225,7 +278,35 @@ def build_dc_generator(noise_dim=NOISE_DIM):
     ##############################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+#Fully connected with output size 1024
+#ReLU
+#BatchNorm
+# Fully connected with output size 7 x 7 x 128
+# ReLU
+# BatchNorm
+#Use Unflatten() to reshape into Image Tensor of shape 7, 7, 128
+# ConvTranspose2d: 64 filters of 4x4, stride 2, 'same' padding (use padding=1)
+# ReLU
+# BatchNorm
+#ConvTranspose2d: 1 filter of 4x4, stride 2, 'same' padding (use padding=1)
+#TanH
+#Should have a 28x28x1 image, reshape back into 784 vector (using Flatten())
+
+    return nn.Sequential(
+        nn.Linear(noise_dim,1024),
+        nn.ReLU(),
+        nn.BatchNorm1d(1024),
+        nn.Linear(1024,7*7*128),
+        nn.ReLU(),
+        nn.BatchNorm1d(7*7*128),
+        Unflatten(-1,128,7,7),
+        nn.ConvTranspose2d(128, 64, kernel_size=(4,4), stride=2, padding=1),
+        nn.ReLU(),
+        nn.BatchNorm2d(64),
+        nn.ConvTranspose2d(64, 1, kernel_size=(4,4), stride=2, padding=1),
+        nn.Tanh(),
+        Flatten()
+    )
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ##############################################################################
