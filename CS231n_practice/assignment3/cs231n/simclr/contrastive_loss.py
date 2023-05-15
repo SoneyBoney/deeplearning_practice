@@ -19,7 +19,7 @@ def sim(z_i, z_j):
     # HINT: torch.linalg.norm might be helpful.                                  #
     ##############################################################################
     
-    
+    norm_dot_product  = z_i.dot(z_j) / (torch.linalg.norm(z_i) * torch.linalg.norm(z_j))
     ##############################################################################
     #                               END OF YOUR CODE                             #
     ##############################################################################
@@ -56,7 +56,8 @@ def simclr_loss_naive(out_left, out_right, tau):
         ##############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        total_loss += -((sim(z_k, z_k_N)/tau).exp() / sum([(sim(z_k, x) / tau).exp() for ii,x in enumerate(out) if ii != k])).log()
+        total_loss += -((sim(z_k_N, z_k)/tau).exp() / sum([(sim(z_k_N, x) / tau).exp() for ii,x in enumerate(out) if ii != k+N])).log()
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
          ##############################################################################
@@ -90,7 +91,8 @@ def sim_positive_pairs(out_left, out_right):
     
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    pos_pairs = (out_left * out_right).sum(axis=1) / (torch.linalg.norm(out_left,axis=1)*torch.linalg.norm(out_right,axis=1))
+    pos_pairs = pos_pairs.unsqueeze(dim=1)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     

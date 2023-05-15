@@ -131,3 +131,5 @@ dmypy.json
 hotdog/data/*
 *.DS_Store
 CS231n_practice/*/*/datasets/*
+CS231n_practice/*/*/data/*
+CS231n_practice/*/*/petrained_models/*
